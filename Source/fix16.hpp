@@ -113,11 +113,8 @@ class Fix16
         return Fix16(value, 0);
     }
 
-    //MATCH_FUNC(0x4086A0)
-    Fix16 operator-() const
-    {
-        return Fix16(-mValue, 0);
-    }
+    // MATCH_FUNC(0x4086A0) - defined out-of-line in fix16.cpp
+    Fix16 operator-() const;
 
     s32 operator>(const Fix16& other) const
     {

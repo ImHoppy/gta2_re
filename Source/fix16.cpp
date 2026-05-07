@@ -15,6 +15,12 @@ DEFINE_GLOBAL_INIT(Ang16, word_669156, Ang16(720), 0x669156);
 DEFINE_GLOBAL_INIT(Ang16, word_667A7C, Ang16(360), 0x667A7C);
 DEFINE_GLOBAL_INIT(Ang16, word_66916C, Ang16(1080), 0x66916C);
 
+MATCH_FUNC(0x4086A0)
+Fix16 Fix16::operator-() const
+{
+    return Fix16(-mValue, 0);
+}
+
 MATCH_FUNC(0x408660)
 Fix16 Fix16::operator+(const Fix16& rhs) const
 {
