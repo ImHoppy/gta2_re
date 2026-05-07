@@ -369,10 +369,105 @@ Ambulance_20* Ambulance_110::AllocateTaskSlot_4FA4B0()
     return 0;
 }
 
-STUB_FUNC(0x4fa500)
+WIP_FUNC(0x4fa500)
 void Ambulance_110::ProcessPatientQueue_4FA500()
 {
-    NOT_IMPLEMENTED;
+    field_1_f8_idx -= field_4.RemovePedsInSpecificState_471290();
+    if (!field_1_f8_idx)
+    {
+        return;
+    }
+
+    Ped* pPed = field_4.RemoveFirstPed_471320();
+    if (pPed->sub_4701D0())
+    {
+        --field_1_f8_idx;
+        gAmbulance_110_6F70A8->TryAddPatient_4FA470(pPed);
+        return;
+    }
+
+    u8 kfc_x = pPed->field_1AC_cam.x.ToUInt8();
+    u8 kfc_y = pPed->field_1AC_cam.y.ToUInt8();
+    u8 kfc_z = pPed->field_1AC_cam.z.ToUInt8();
+
+    if (!gOrca_2FD4_6FDEF0->FindNearbyTileMatchingSlopeType_5552B0(1, &kfc_x, &kfc_y, &kfc_z, 0))
+    {
+        --field_1_f8_idx;
+        pPed->SetObjective(objectives_enum::objective_50, 9999);
+        return;
+    }
+
+    for (u8 i = 0; i < 2; i++)
+    {
+        Ambulance_20* pSlot = &field_D0[i];
+        if (pSlot->field_18 != 1 || !pSlot->field_4_paramedics_crew->PedIsValid_5CBC60())
+        {
+            continue;
+        }
+
+        Fix16 dx;
+        Fix16 dy;
+        Fix16 absDx;
+        Fix16 absDy;
+        dx.mValue = ((u8)pSlot->field_0 << 14) - pPed->field_1AC_cam.x.mValue;
+        dy.mValue = ((u8)pSlot->field_1 << 14) - pPed->field_1AC_cam.y.mValue;
+        if (dy.mValue > 0)
+            absDy.mValue = dy.mValue;
+        else
+            absDy = -dy;
+        if (dx.mValue > 0)
+            absDx.mValue = dx.mValue;
+        else
+            absDx = -dx;
+        if (Fix16::Max_44E540(absDx, absDy).mValue >= dword_6F6FC0 || pSlot->field_14_count >= 10u)
+        {
+            continue;
+        }
+
+        pSlot->AddPassenger_4FA800(pPed);
+        --field_1_f8_idx;
+
+        Kfc_30* pCrew = pSlot->field_4_paramedics_crew;
+        if (pCrew->field_28 == 5)
+        {
+            pSlot->field_0 = kfc_x;
+            pSlot->field_1 = kfc_y;
+            pSlot->field_2 = kfc_z;
+            pCrew->field_28 = 6;
+        }
+        return;
+    }
+
+    Ambulance_20* pNewSlot = AllocateTaskSlot_4FA4B0();
+    if (pNewSlot)
+    {
+        pNewSlot->field_18 = 1;
+        pNewSlot->field_0 = kfc_x;
+        pNewSlot->field_1 = kfc_y;
+        pNewSlot->field_2 = kfc_z;
+
+        Kfc_30* pNewCrew = gKfc_1E0_706280->New_5CBB80();
+        pNewSlot->field_4_paramedics_crew = pNewCrew;
+        if (!pNewCrew)
+        {
+            --field_1_f8_idx;
+            pPed->SetObjective(objectives_enum::objective_50, 9999);
+            pNewSlot->ClearTask_4FA7D0();
+            return;
+        }
+
+        pNewCrew->field_1E_is_used = 1;
+        pNewCrew->field_20_maybe_type = 1;
+        pNewCrew->field_24 = 1;
+        pNewCrew->field_28 = 3;
+        pNewCrew->field_18 = 300;
+        pNewCrew->field_1C = 0;
+        pNewCrew->field_C_x.FromInt(kfc_x);
+        pNewCrew->field_10_y.FromInt(kfc_y);
+        pNewCrew->field_14_z.FromInt(kfc_z);
+        pNewSlot->AddPassenger_4FA800(pPed);
+    }
+    --field_1_f8_idx;
 }
 
 MATCH_FUNC(0x4fa790)

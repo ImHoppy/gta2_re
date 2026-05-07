@@ -2,6 +2,7 @@
 
 #include "Function.hpp"
 #include "Ped_List_4.hpp"
+#include "fix16.hpp"
 
 class Ped;
 class Kfc_30;
