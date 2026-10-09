@@ -3529,3 +3529,33 @@ Tried, all worse or no change:
   `GetLength_*_442AD0` inline helpers: 203. The explicit out-of-line form in the source is
   right; don't "simplify" it.
 
+## The systematic difference: we cross-jump more than 10.5 does
+
+Four of the WIPs looked at here differ mainly in how many copies of a repeated block survive, and
+in every case our build has **fewer** copies than the original:
+
+| 10.5 | what the original keeps | ours |
+|---|---|---|
+| 0x5EB970 | 4 copies of the error tail, 19 `jmp`s into them | 11 copies |
+| 0x54B8F0 | 8 `DispatchCollision_548670` sites, 2 `set_xyz_lazy_451950` | 7 and 1 |
+| 0x467090 | an inline epilogue for the driver loop's `return 0` | a `jmp` to the shared one |
+| 0x45D000 | 263 bytes more code, identical call multiset | merged |
+
+The source already has all the sites (`54B8F0` really does call `DispatchCollision_548670`
+eight times), so this is not missing code. Cross-jumping merges tails that are *identical*, and
+the original's copies are not identical: they differ in which register holds a value, from the
+eax/ecx/edx round robin (`Scripts/regalloc/README.md`: a temp's register depends on how many
+round-robin picks came before it in the function, in code generation order, and blocks merged
+after allocation still made their picks). Ours come out with the same register in every copy, so
+they merge.
+
+That makes the excess merging a symptom, not the cause: our round-robin cursor sits at a
+different offset than the original's, by one pick somewhere earlier in the function. Changing the
+number of picks is the only lever, and it is not something a source edit aims at precisely:
+removing a local in `FreeLowestPriority_543690` (12 -> 60), caching `2 * doorId` in
+`CarDoorAlignmentSolver_545AF0` (50 -> 748) and inlining the three `goto found` sites in
+`FindUsableCarDoor_467090` (76, unchanged - VC6 merged them straight back) all failed.
+
+Worth knowing before picking a near miss: a WIP whose remaining diff is "a register is
+different" usually also explains why a nearby block merged or didn't.
+
