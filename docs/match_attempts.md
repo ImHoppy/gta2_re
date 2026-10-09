@@ -3559,3 +3559,30 @@ removing a local in `FreeLowestPriority_543690` (12 -> 60), caching `2 * doorId`
 Worth knowing before picking a near miss: a WIP whose remaining diff is "a register is
 different" usually also explains why a nearby block merged or didn't.
 
+## Why the near misses are coupled, and where the lever actually is
+
+`Char_B4::GetNextRotationToward_550F60` makes it clear. Its first 75 lines are identical to the
+original; from there on every difference is a temp in the next register of the round robin
+(`mov (%esi),%ax` against our `%dx`, `lea ...,%ecx` against `%edx`), i.e. **our cursor is one
+pick ahead**. Nothing before that point differs, so the extra pick is not in the asm at all:
+`Scripts/regalloc/README.md` notes that blocks merged after allocation still made their picks, so
+a block that cross-jumping removed can move the cursor.
+
+That ties the two observations together:
+
+- we cross-jump more than 10.5 (see above), because our copies are identical where the
+  original's differ by a register, and
+- the merged-away blocks still consumed round-robin picks, which offsets every temp register
+  from that point on, which is what the 2-30 line near misses consist of.
+
+So the lever is the **number of blocks and picks before the divergence**, not any expression in
+the source. Changing it means adding or removing a value that needs a register earlier in the
+function, which no source edit aims at precisely: of ~23 variants tried across 15 functions
+(operand order, locals vs re-reads, `volatile`, references, in-place construction, branch
+inlining, hoisting a shared read, window limits 62..80), two fixed a real structural error and
+the rest were neutral or worse, most of them several times worse.
+
+The two that worked (`5EB970`, `574720`) both came from reading the original's asm for a
+*semantic* feature our source lacked - a per-site buffer, a counter kept in memory - not from
+chasing a register. That is the only method here with a positive hit rate.
+
